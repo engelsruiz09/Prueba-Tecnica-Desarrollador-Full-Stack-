@@ -41,6 +41,9 @@ services:
       dockerfile: Dockerfile
     container_name: vantum_backend
     restart: unless-stopped
+    dns:
+      - 8.8.8.8      # Google DNS primario
+      - 8.8.4.4      # Google DNS secundario
     environment:
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
@@ -87,6 +90,8 @@ services:
 networks:
   vantum_network:
     driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: "1400"   # ← fix para WSL2/Windows
 
 # Volumen persistente para datos de PostgreSQL
 volumes:
