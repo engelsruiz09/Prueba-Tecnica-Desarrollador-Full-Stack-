@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+env = [
+    "DATABASE_URL=postgresql+asyncpg://vantum_user:vantum_dev_password@db:5432/vantum_db",
+    "JWT_SECRET_KEY=test_secret_key_for_testing_only",
+    "JWT_ALGORITHM=HS256",
+    "JWT_EXPIRATION_MINUTES=60",
+    "CORS_ORIGINS=http://localhost:5173",
+]
