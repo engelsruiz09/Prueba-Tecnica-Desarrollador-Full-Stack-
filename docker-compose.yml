@@ -1,0 +1,99 @@
+# Docker Compose orquesta los 3 servicios de la plataforma:
+# - db: PostgreSQL (persistente)
+# - backend: FastAPI
+# - frontend: React + Vite
+
+services:
+  # ======================================================
+  # Base de datos PostgreSQL
+  # ======================================================
+  db:
+    image: postgres:16-alpine
+    container_name: vantum_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      # Exponemos el puerto de Postgres al host para poder conectarnos con DBeaver/psql si queremos
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      # Volumen nombrado: los datos sobreviven a `docker compose down`.
+      # Para borrar datos: `docker compose down -v`.
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready verifica que Postgres acepte conexiones.
+      # Esto es crítico: el backend NO debe arrancar antes de que la DB esté lista.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - vantum_network
+
+  # ======================================================
+  # Backend FastAPI
+  # ======================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vantum_backend
+    restart: unless-stopped
+    dns:
+      - 8.8.8.8      # Google DNS primario
+      - 8.8.4.4      # Google DNS secundario
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    ports:
+      - "${BACKEND_PORT}:8000"
+    volumes:
+      # Montamos el código fuente para hot reload con uvicorn --reload
+      - ./backend:/app
+    depends_on:
+      db:
+        # Solo arranca cuando el healthcheck de db pasa en estado healthy
+        condition: service_healthy
+    networks:
+      - vantum_network
+
+  # ======================================================
+  # Frontend React + Vite
+  # ======================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vantum_frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    ports:
+      - "${FRONTEND_PORT}:5173"
+    volumes:
+      # Montamos el código para hot reload de Vite
+      - ./frontend:/app
+      # Volumen anónimo para node_modules: evita que el montaje anterior
+      # sobreescriba el node_modules del contenedor (Linux) con el del host (Windows).
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - vantum_network
+
+# Red interna compartida. Los servicios se resuelven por nombre (db, backend, frontend).
+networks:
+  vantum_network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: "1400"   # ← fix para WSL2/Windows
+
+# Volumen persistente para datos de PostgreSQL
+volumes:
+  postgres_data:
+    driver: local

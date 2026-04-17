@@ -1,0 +1,30 @@
+# Framework web
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+
+# ORM y driver async para PostgreSQL
+sqlalchemy[asyncio]==2.0.35
+asyncpg==0.29.0
+alembic==1.13.3
+
+# Validación y settings
+pydantic==2.9.2
+pydantic-settings==2.5.2
+email-validator==2.2.0
+
+# Autenticación: JWT + hashing de contraseñas
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+
+# Cliente HTTP async (para consumir Frankfurter)
+httpx==0.27.2
+
+# Testing
+pytest==8.3.3
+pytest-asyncio==0.24.0
+
+# Testing adicional
+aiosqlite==0.20.0
+pytest-env==1.1.5
+anyio==4.6.0
